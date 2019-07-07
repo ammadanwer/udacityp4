@@ -6,15 +6,18 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import udf, monotonically_increasing_id
 from pyspark.sql.functions import year, month, dayofmonth, hour, weekofyear, date_format
 
-
 config = configparser.ConfigParser()
 config.read('dl.cfg')
 
-os.environ['AWS_ACCESS_KEY_ID']=config.get('AWS_KEYS','AWS_ACCESS_KEY_ID')
-os.environ['AWS_SECRET_ACCESS_KEY']=config.get('AWS_KEYS','AWS_SECRET_ACCESS_KEY')
+os.environ['AWS_ACCESS_KEY_ID'] = config.get('AWS_KEYS', 'AWS_ACCESS_KEY_ID')
+os.environ['AWS_SECRET_ACCESS_KEY'] = config.get('AWS_KEYS', 'AWS_SECRET_ACCESS_KEY')
 
 
 def create_spark_session():
+    """
+    Creates and returns a SparkSession object
+    Returns: SparkSession object
+    """
     spark = SparkSession \
         .builder \
         .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:2.7.0") \
@@ -23,6 +26,13 @@ def create_spark_session():
 
 
 def process_song_data(spark, input_data, output_data):
+    """
+    Gets the directory path for song files and writes songs_table and artist_table in parquet files.
+    Args:
+        spark: Instance of SparkSession
+        input_data: Path of the parent directory where the song files are present
+        output_data: Path of the parent directory where the output tables are to be written
+    """
     # get filepath to song data file
     song_data = f"{input_data}song_data/*/*/*/*.json"
 
@@ -36,13 +46,21 @@ def process_song_data(spark, input_data, output_data):
     songs_table.write.mode('overwrite').partitionBy('year', 'artist_id').parquet(f'{output_data}songs.pq')
 
     # extract columns to create artists table
-    artists_table = df.select('artist_id', 'artist_name', 'artist_location', 'artist_latitude', 'artist_longitude')
+    artists_table = df.select('artist_id', col('artist_name').alias('name'), col('artist_location').alias('location'),
+                              col('artist_latitude').alias('latitude'), col('artist_longitude').alias('longitude'))
 
     # write artists table to parquet files
     artists_table.write.mode('overwrite').parquet(f'{output_data}artists.pq')
 
 
 def process_log_data(spark, input_data, output_data):
+    """
+    Gets the directory path for log files and writes users_table, time_table, songplays table in parquet files.
+    Args:
+        spark: Instance of SparkSession
+        input_data: Path of the parent directory where the song files are present
+        output_data: Path of the parent directory where the output tables are to be written
+    """
     # get file path to log data file
     log_data = f"{input_data}log_data/*/*/*.json"
 
@@ -95,6 +113,9 @@ def process_log_data(spark, input_data, output_data):
 
 
 def main():
+    """
+    The main function responsible for creating sparkSession and creating the required tables from data files.
+    """
     spark = create_spark_session()
     input_data = "s3a://udacity-dend/"
     output_data = "s3a://udacity-dend-ammad/"
